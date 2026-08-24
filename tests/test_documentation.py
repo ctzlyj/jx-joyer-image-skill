@@ -31,7 +31,7 @@ def test_readme_has_three_step_beginner_flow() -> None:
     for text in (
         "第一步：让 Codex 安装",
         "第二步：直接描述需求",
-        "第三步：确认调用量并安全输入 Key",
+        "第三步：安全输入 Key 并开始生成",
         "不需要理解 Skill、命令行或 JSON",
     ):
         assert text in readme
@@ -43,5 +43,17 @@ def test_skill_automates_bootstrap_and_routing() -> None:
         "install.ps1",
         "scripts/run.ps1",
         "Do not ask novice users to choose a CLI command",
+        "Do not require request-count estimation or an additional confirmation",
     ):
         assert text in skill
+
+
+def test_request_estimation_is_optional_not_a_gate() -> None:
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    skill = (ROOT / "SKILL.md").read_text(encoding="utf-8")
+    security = (ROOT / "references/security.md").read_text(encoding="utf-8")
+    agent = (ROOT / "agents/openai.yaml").read_text(encoding="utf-8")
+    assert "确认调用量" not in readme
+    assert "Estimate usage before every quota-consuming operation" not in skill
+    assert "必须运行 `estimate`" not in security
+    assert "真实调用前说明请求量" not in agent

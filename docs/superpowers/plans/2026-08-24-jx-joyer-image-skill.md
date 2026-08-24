@@ -115,7 +115,7 @@ description: Use when JD colleagues ask Codex to create ecommerce product images
 
 Correct the frontmatter key to `description` during implementation. Keep the body short and route detailed command syntax to `references/`.
 
-`agents/openai.yaml` must identify the skill as “JX Joyer Image” and instruct Codex to inspect inputs, estimate paid image requests, request confirmation, then invoke the matching CLI workflow.
+`agents/openai.yaml` must identify the skill as “JX Joyer Image” and instruct Codex to inspect inputs, choose the matching workflow, and execute directly once requirements are clear.
 
 - [ ] **Step 5: Run package checks**
 
@@ -627,7 +627,7 @@ Expected: failure because references do not exist.
 
 - [ ] **Step 3: Write progressive-disclosure documentation**
 
-Document installation with `python -m pip install -e .`, runtime Key setup for PowerShell/Bash without showing a real value, capability examples, request-count confirmation, output locations, troubleshooting, and explicit non-goals. Explain that the internal hostname works only on JD network/VPN.
+Document installation with `python -m pip install -e .`, runtime Key setup for PowerShell/Bash without showing a real value, capability examples, optional request-count lookup, output locations, troubleshooting, and explicit non-goals. Explain that the internal hostname works only on JD network/VPN.
 
 - [ ] **Step 4: Run tests and commit**
 

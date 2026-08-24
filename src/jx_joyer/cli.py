@@ -206,7 +206,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 0
         requires_model = _requires_model(args.command, payload)
         if requires_model and not args.yes:
-            print("This command may consume Oxygen quota. Review the request count and rerun with --yes after user confirmation.", file=sys.stderr)
+            print("This command performs a live Oxygen request. Rerun with --yes to execute.", file=sys.stderr)
             return 2
         if requires_model:
             with OxygenClient.from_environment() as client:

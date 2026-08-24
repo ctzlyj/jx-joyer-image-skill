@@ -2,6 +2,6 @@ interface:
   display_name: "JX Joyer Image"
   short_description: "京东 Oxygen 电商生图与图片编辑工作流"
   brand_color: "#E1251B"
-  default_prompt: "使用 $jx-joyer-image 自动分析我的图片需求，选择合适能力并在真实调用前说明请求量。"
+  default_prompt: "使用 $jx-joyer-image 自动分析我的图片需求，选择合适能力并直接执行；需要 Key 时使用安全输入。"
 policy:
   allow_implicit_invocation: true

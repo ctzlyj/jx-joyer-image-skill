@@ -34,7 +34,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run.ps1 -- [--output
 - `replica --task-file FILE [--yes]`：执行爆款复刻 `analyze`、`configure`、`copy`、`generate` 或 `cancel`。
 - `history [--kind KIND] [--limit N]`：读取本地历史，不发送模型请求。
 
-`--yes` 只能在用户看过请求量并明确确认后添加。没有 `--yes` 时，包装器不会索要 Key，也不会调用模型。
+`--yes` 是 CLI 的真实执行标志。Codex 在需求明确后自动添加，不需要用户额外确认调用次数；没有 `--yes` 时，包装器不会索要 Key，也不会调用模型。
 
 ## 直接 CLI
 

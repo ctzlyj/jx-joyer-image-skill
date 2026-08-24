@@ -21,7 +21,10 @@ def test_doctor_does_not_require_key_or_call_model(tmp_path, monkeypatch, capsys
 def test_model_commands_require_explicit_yes(tmp_path, capsys) -> None:
     code = main(["--output-dir", str(tmp_path), "generate", "--prompt", "测试"])
     assert code == 2
-    assert "--yes" in capsys.readouterr().err
+    message = capsys.readouterr().err
+    assert "--yes" in message
+    assert "request count" not in message.lower()
+    assert "user confirmation" not in message.lower()
 
 
 def test_help_lists_business_commands(capsys) -> None:

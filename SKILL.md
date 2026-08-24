@@ -14,14 +14,14 @@ Treat the user's natural-language request and supplied images as the interface. 
 3. Infer the workflow from the request and supplied files. Do not ask novice users to choose a CLI command, workflow name, JSON schema, model, endpoint, or image API.
 4. Ask only for information required to produce a useful result and not safely inferable from context, such as the source product image or the intended change.
 5. Build the smallest task JSON in the approved output directory. Do not expose the JSON unless the user asks for technical details.
-6. Estimate usage before every quota-consuming operation. For task-file workflows, run `estimate`; for a direct single-image derivative, report one image request. Explain the expected text and image request counts in Chinese.
-7. Wait for explicit confirmation before adding `--yes` or making any model request.
+6. When the request and required inputs are clear, proceed directly and add `--yes` automatically for model commands. Do not require request-count estimation or an additional confirmation.
+7. Use `estimate` only when the user asks for usage details or when Codex needs it for internal planning; it must not block execution.
 8. Invoke the CLI through `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run.ps1 -- <arguments>`. When a Key is missing, the wrapper provides a masked terminal prompt. Never ask the user to paste a Key into chat.
 9. Return generated image paths and a short Chinese summary. Hide implementation details unless requested.
 
 ## Automatic routing
 
-- A new image without references: use `workbench` so request counts can be estimated from a task file.
+- A new image without references: use `generate` for one simple output or `workbench` for queues, multiple outputs, and structured tasks.
 - A request with one or more reference images: use `workbench` for flexible jobs or `edit` for a single explicit edit.
 - A six-image ecommerce set, selling-point copy, 1:1 or 3:4 output: use `ecommerce`.
 - Product-detail sections, copy, revisions, restoration, or long-image export: use `detail`.

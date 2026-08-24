@@ -45,7 +45,7 @@ def test_powershell_script_parses(relative: str) -> None:
 ```python
 def test_readme_has_three_step_beginner_flow() -> None:
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
-    for text in ("第一步：让 Codex 安装", "第二步：直接描述需求", "第三步：确认调用量并安全输入 Key", "不需要理解 Skill、命令行或 JSON"):
+    for text in ("第一步：让 Codex 安装", "第二步：直接描述需求", "第三步：安全输入 Key 并开始生成", "不需要理解 Skill、命令行或 JSON"):
         assert text in readme
 
 
@@ -163,7 +163,7 @@ Preserve all endpoint, model, estimation, and safety constraints. Add:
 - Choose the workflow from the request and supplied images. Ask only for necessary information that cannot be safely inferred.
 - Build task JSON in the approved output directory without exposing it unless requested.
 - Invoke commands through `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run.ps1 -- <arguments>`.
-- Run `estimate`, summarize request counts in Chinese, and wait for confirmation before quota consumption.
+- Use `estimate` only when requested; once requirements are clear, add `--yes` automatically without a request-count confirmation.
 - Let `scripts/run.ps1` show the masked Key prompt. Never ask users to paste a Key into chat.
 ```
 
@@ -182,9 +182,9 @@ Use these three primary actions before technical prerequisites:
 
 不需要理解 Skill、命令行或 JSON。直接发送商品图和需求。
 
-## 第三步：确认调用量并安全输入 Key
+## 第三步：安全输入 Key 并开始生成
 
-Codex 会先说明预计请求数。确认后，在终端遮罩输入自己的 Oxygen Key；不要把 Key 发到聊天中。
+需求明确后 Codex 直接执行；需要 Key 时，在终端遮罩输入自己的 Oxygen Key，不要把 Key 发到聊天中。
 ```
 
 Add copyable examples for text-to-image, reference edits, ecommerce sets, details, batch edits, derivatives, and replicas. Move pip and direct CLI instructions under `高级用法`.
