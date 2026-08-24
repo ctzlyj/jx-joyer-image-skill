@@ -28,3 +28,10 @@ def test_security_scan_rejects_local_user_path_and_corporate_email(tmp_path: Pat
     findings = scan_repository(tmp_path)
     assert any("local user path" in finding.lower() for finding in findings)
     assert any("corporate email" in finding.lower() for finding in findings)
+
+
+def test_security_scan_checks_powershell_files(tmp_path: Path) -> None:
+    value = "$env:JD_LLM_API_KEY = " + "'runtime-secret-value-123456'"
+    (tmp_path / "leak.ps1").write_text(value, encoding="utf-8")
+    findings = scan_repository(tmp_path)
+    assert any("oxygen key assignment" in finding.lower() for finding in findings)

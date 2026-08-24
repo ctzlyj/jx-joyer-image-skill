@@ -1,24 +1,48 @@
 # 命令参考
 
-统一入口：`jx-joyer [--output-dir DIR] <command>`。可用命令：`doctor`、`estimate`、`copy`、`generate`、`edit`、`ecommerce`、`workbench`、`batch-edit`、`detail`、`replica`、`derive`、`history`。
+普通用户不需要运行这些命令。请直接向 Codex 描述图片需求，由 Skill 自动选择命令、生成任务文件并解释请求量。
 
-- `doctor`：检查 Python 版本、Key 是否存在和固定网关配置，不发送模型请求。
-- `estimate --task-file FILE`：计算预计文案与生图请求数，不发送模型请求。
+## 推荐入口
+
+所有命令优先通过安全包装器运行，它会自动使用 Skill 自带的 `.venv`，并在真实调用缺少 Key 时提供遮罩输入：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\run.ps1 -- doctor
+```
+
+统一格式：
+
+```text
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run.ps1 -- [--output-dir DIR] <command>
+```
+
+可用命令：`doctor`、`estimate`、`copy`、`generate`、`edit`、`ecommerce`、`workbench`、`batch-edit`、`detail`、`replica`、`derive`、`history`。
+
+- `doctor`：检查 Python、Key 是否存在和固定网关配置，不发送模型请求。
+- `estimate --task-file FILE`：计算预计文案与图片请求数，不发送模型请求。
 - `copy --instructions TEXT --input TEXT --yes`：生成结构化文案。
 - `generate --prompt TEXT [--size SIZE] --yes`：无参考图文生图。
 - `edit --prompt TEXT --reference FILE [--reference FILE ...] [--size SIZE] --yes`：单图或多图参考编辑。
 - `derive --source FILE --instruction TEXT [--aspect-ratio RATIO] [--size SIZE] --yes`：对现有结果追加修改。
 - `ecommerce --task-file FILE --yes`：生成商品套图。
-- `ecommerce --retry TASK_ID [--asset TYPE ...] --yes`：重试失败商品图。
-- `ecommerce --derive TASK_ID --asset TYPE --instruction TEXT --yes`：派生商品图。
-- `workbench --task-file FILE --yes`：自由生图、提示词队列或多参考图编辑。
+- `ecommerce --retry TASK_ID [--asset TYPE ...] --yes`：重试失败的商品图。
+- `ecommerce --derive TASK_ID --asset TYPE --instruction TEXT --yes`：派生修改商品图。
+- `workbench --task-file FILE --yes`：执行提示词队列或多参考图任务。
 - `batch-edit --task-file FILE --yes`：批量修图。
-- `batch-edit --retry TASK_ID [--asset ID ...] --yes`：只重试失败项。
-- `detail --task-file FILE --yes`：执行详情页 `create`、`copy`、`generate`、`derive`、`restore` 或 `export` 动作。
-- `replica --task-file FILE --yes`：执行爆款复刻 `analyze`、`configure`、`copy`、`generate` 或 `cancel` 动作。
-- `history [--kind KIND] [--limit N]`：读取本地任务历史。
+- `batch-edit --retry TASK_ID [--asset ID ...] --yes`：重试失败项。
+- `detail --task-file FILE [--yes]`：执行详情页 `create`、`copy`、`generate`、`derive`、`restore` 或 `export`。
+- `replica --task-file FILE [--yes]`：执行爆款复刻 `analyze`、`configure`、`copy`、`generate` 或 `cancel`。
+- `history [--kind KIND] [--limit N]`：读取本地历史，不发送模型请求。
 
-所有真实模型命令都要求 `--yes`。这表示用户已看到 `estimate` 结果并明确同意消耗额度，不表示允许保存 Key。
+`--yes` 只能在用户看过请求量并明确确认后添加。没有 `--yes` 时，包装器不会索要 Key，也不会调用模型。
 
-CLI 成功时向 stdout 输出 JSON；错误时向 stderr 输出脱敏 JSON，并返回非零退出码。
+## 直接 CLI
 
+已经手工激活虚拟环境的高级用户仍可使用：
+
+```powershell
+jx-joyer doctor
+jx-joyer estimate --task-file task.json
+```
+
+Key 只能通过当前进程的 `JD_LLM_API_KEY` 提供，不能放进参数、任务文件或日志。

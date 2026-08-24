@@ -4,7 +4,7 @@ import re
 from pathlib import Path
 import sys
 
-TEXT_SUFFIXES = {".md", ".py", ".toml", ".yaml", ".yml", ".json", ".txt"}
+TEXT_SUFFIXES = {".md", ".py", ".toml", ".yaml", ".yml", ".json", ".txt", ".ps1"}
 SKIP_PARTS = {".git", ".venv", ".pytest_cache", "__pycache__", "jx-joyer-output"}
 PATTERNS = {
     "private key": re.compile("BEGIN " + "PRIVATE KEY"),
