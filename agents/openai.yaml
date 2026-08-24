@@ -1,0 +1,7 @@
+interface:
+  display_name: "JX Joyer Image"
+  short_description: "京东 Oxygen 电商生图与图片编辑工作流"
+  brand_color: "#E1251B"
+  default_prompt: "Use $jx-joyer-image to plan and run the appropriate JD Oxygen image workflow for my request."
+policy:
+  allow_implicit_invocation: true

@@ -1,0 +1,26 @@
+# 能力映射
+
+| 用户意图 | CLI | Oxygen 接口 |
+| --- | --- | --- |
+| 自由文生图 | `generate` / `workbench` | `/images/generations` |
+| 参考图编辑 | `edit` / `derive` | `/images/edits` |
+| 商品套图 | `ecommerce` | `/responses`（按需）+ 图片接口 |
+| 商品详情页 | `detail` | `/responses`（按需）+ 图片接口 |
+| 批量修图 | `batch-edit` | `/images/edits` |
+| 爆款复刻 | `replica` | `/responses` + `/images/edits` |
+
+## 商品套图
+
+固定支持主图、场景图、卖点图、白底图、认证图和四宫格图。默认比例为 `1:1`、默认质量为 `2K`。手工卖点、长标题和短标题优先；模型只补齐被选择且为空的字段。
+
+## 详情页
+
+核心顺序为 `hero`、`product`、`benefits`、`experience`、`proof`、`service`。支持单段或全量生成、派生修改、修订恢复和纵向长图导出。
+
+## 工作台与批量修图
+
+工作台支持 12 种固定比例加 `Adaptive`、提示词队列、共享参考图和逐图参考模式。批量修图最多处理 10 张源图和 3 张公共参考图，失败重试保持原参数。
+
+## 爆款复刻
+
+模板视觉分析通过 `/responses` 输入临时 Data URL，仅存在于请求内存中，不写入任务清单。生图时模板图先作为布局参考，用户商品主图随后作为商品身份参考，最多追加一张用途相关参考图。
