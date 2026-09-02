@@ -23,6 +23,60 @@ def test_ecommerce_prompt_contains_task_manual_copy_and_ratio() -> None:
     assert "3:4" in prompt
 
 
+def test_ecommerce_main_prompt_focuses_copy_and_requires_grounded_evidence() -> None:
+    prompt = build_ecommerce_prompt(
+        task_type="main",
+        product_name="清风抽纸 24包 129mm",
+        user_prompt="",
+        selling_points=["匠心工艺", "亲肤材质", "高级质感"],
+        long_title="清风抽纸家庭装",
+        short_title="柔韧亲肤",
+        aspect_ratio="1:1",
+    )
+    assert "只选择一个" in prompt
+    assert "1 条主标题" in prompt
+    assert "1 条解释性副标题" in prompt
+    assert "最多 2 个可信证据标签" in prompt
+    assert "商品标题、参考图或已有卖点" in prompt
+    assert "禁止虚构数字、参数、倍率、效果、认证或竞品差异" in prompt
+
+
+def test_ecommerce_prompts_separate_scene_selling_point_and_grid_roles() -> None:
+    common = {
+        "product_name": "山茶花面霜",
+        "user_prompt": "",
+        "selling_points": ["匠心工艺", "亲肤材质", "高级质感"],
+        "long_title": "山茶花补水面霜女保湿修护",
+        "short_title": "山茶花面霜",
+        "aspect_ratio": "1:1",
+    }
+    scene = build_ecommerce_prompt(task_type="scene", **common)
+    selling_points = build_ecommerce_prompt(task_type="sellingPoints", **common)
+    grid = build_ecommerce_prompt(task_type="gridScene", **common)
+    assert "谁在什么场景下如何使用商品" in scene
+    assert "不确定具体人群或场景时" in scene
+    assert "卖点解释图" in selling_points
+    assert "视觉证据" in selling_points
+    assert "不要简单重复主图文案" in selling_points
+    assert "购买疑问" in grid
+    assert "四格信息不得重复" in grid
+
+
+def test_ecommerce_selling_point_prompt_does_not_invent_missing_copy() -> None:
+    prompt = build_ecommerce_prompt(
+        task_type="sellingPoints",
+        product_name="山茶花面霜",
+        user_prompt="",
+        selling_points=[],
+        long_title="",
+        short_title="",
+        aspect_ratio="1:1",
+    )
+    assert "没有已有卖点时" in prompt
+    assert "不要新增营销文字" in prompt
+    assert "选择一个需要进一步说明的重点卖点" not in prompt
+
+
 def test_copy_prompt_requests_only_missing_selected_fields() -> None:
     missing = missing_copy_fields(
         selected=["sellingPoints", "longTitle", "shortTitle"],
