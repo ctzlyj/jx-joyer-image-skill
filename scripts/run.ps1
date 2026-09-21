@@ -35,9 +35,9 @@ try {
         }
     }
 
-    $KnownCommands = @("doctor", "estimate", "history", "copy", "generate", "edit", "derive", "ecommerce", "workbench", "batch-edit", "detail", "replica")
+    $KnownCommands = @("doctor", "estimate", "history", "export", "copy", "generate", "edit", "derive", "ecommerce", "workbench", "batch-edit", "detail", "replica")
     $CommandName = $CliArgs | Where-Object { $KnownCommands -contains $_ } | Select-Object -First 1
-    $OfflineCommands = @("doctor", "estimate", "history")
+    $OfflineCommands = @("doctor", "estimate", "history", "export")
     $NeedsKey = $CommandName -and $OfflineCommands -notcontains $CommandName -and $CliArgs -contains "--yes"
 
     if ($NeedsKey -and -not $env:JD_LLM_API_KEY) {

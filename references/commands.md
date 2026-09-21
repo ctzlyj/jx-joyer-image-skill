@@ -16,7 +16,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\run.ps1 -- doctor
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run.ps1 -- [--output-dir DIR] <command>
 ```
 
-可用命令：`doctor`、`estimate`、`copy`、`generate`、`edit`、`ecommerce`、`workbench`、`batch-edit`、`detail`、`replica`、`derive`、`history`。
+可用命令：`doctor`、`estimate`、`copy`、`generate`、`edit`、`ecommerce`、`workbench`、`batch-edit`、`detail`、`replica`、`derive`、`history`、`export`。
 
 - `doctor`：检查 Python、Key 是否存在和固定网关配置，不发送模型请求。
 - `estimate --task-file FILE`：计算预计文案与图片请求数，不发送模型请求。
@@ -28,11 +28,14 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run.ps1 -- [--output
 - `ecommerce --retry TASK_ID [--asset TYPE ...] --yes`：重试失败的商品图。
 - `ecommerce --derive TASK_ID --asset TYPE --instruction TEXT --yes`：派生修改商品图。
 - `workbench --task-file FILE --yes`：执行提示词队列或多参考图任务。
+- `workbench --retry TASK_ID [--asset ID ...] --yes`：仅重试失败图，省略 `--asset` 时选择全部失败项；保留成功结果。
 - `batch-edit --task-file FILE --yes`：批量修图。
 - `batch-edit --retry TASK_ID [--asset ID ...] --yes`：重试失败项。
 - `detail --task-file FILE [--yes]`：执行详情页 `create`、`copy`、`generate`、`derive`、`restore` 或 `export`。
 - `replica --task-file FILE [--yes]`：执行爆款复刻 `analyze`、`configure`、`copy`、`generate` 或 `cancel`。
 - `history [--kind KIND] [--limit N]`：读取本地历史，不发送模型请求。
+- `history --task TASK_ID`：回读单个任务及逐图状态，不需要 Key。
+- `export --task TASK_ID [--asset ID ...]`：在该任务 `exports/` 下生成 ZIP；省略 `--asset` 时导出全部成功图片。无需 `--yes` 或 Key，不包含原参考图和任务清单。
 
 `--yes` 是 CLI 的真实执行标志。Codex 在需求明确后自动添加，不需要用户额外确认调用次数；没有 `--yes` 时，包装器不会索要 Key，也不会调用模型。
 

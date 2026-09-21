@@ -54,7 +54,10 @@ def build_parser() -> argparse.ArgumentParser:
     ecommerce.add_argument("--yes", action="store_true")
 
     workbench = subparsers.add_parser("workbench", help="Run free-form generation plans")
-    workbench.add_argument("--task-file", required=True)
+    workbench_source = workbench.add_mutually_exclusive_group(required=True)
+    workbench_source.add_argument("--task-file")
+    workbench_source.add_argument("--retry")
+    workbench.add_argument("--asset", action="append", default=[])
     workbench.add_argument("--yes", action="store_true")
 
     batch_edit = subparsers.add_parser("batch-edit", help="Edit multiple source images")
@@ -74,6 +77,10 @@ def build_parser() -> argparse.ArgumentParser:
     history = subparsers.add_parser("history", help="List local task history")
     history.add_argument("--kind")
     history.add_argument("--limit", type=int, default=20)
+    history.add_argument("--task")
+    export = subparsers.add_parser("export", help="Export successful task images as ZIP without a model call")
+    export.add_argument("--task", required=True)
+    export.add_argument("--asset", action="append", default=[])
     return parser
 
 
@@ -139,7 +146,7 @@ def _requires_model(command: str, payload: dict[str, Any] | None) -> bool:
         return str((payload or {}).get("action", "create")) in {"copy", "generate", "derive"}
     if command == "replica":
         return str((payload or {}).get("action", "analyze")) in {"analyze", "copy", "generate"}
-    return command not in {"doctor", "estimate", "history"}
+    return command not in {"doctor", "estimate", "history", "export"}
 
 
 class _NoModelClient:
@@ -168,7 +175,11 @@ def _dispatch(args, context: WorkflowContext, payload: dict[str, Any] | None):
             raise ValueError("ecommerce requires --task-file, --retry, or --derive")
         return run_ecommerce(_workflow_payload(payload, "ecommerce"), context)
     if args.command == "workbench":
-        from .workflows.workbench import run_workbench
+        from .workflows.workbench import retry_workbench, run_workbench
+        if args.retry:
+            return retry_workbench(args.retry, args.asset, context)
+        if args.asset:
+            raise ValueError("--asset requires --retry")
         return run_workbench(_workflow_payload(payload or {}, "workbench"), context)
     if args.command == "batch-edit":
         from .workflows.batch_edit import retry_batch_edit, run_batch_edit
@@ -196,10 +207,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.command == "doctor":
         _emit({"python": sys.version.split()[0], "key_present": bool(os.environ.get("JD_LLM_API_KEY", "").strip()), "gateway": "http://llm-gw.jd.local/v1", "live_request_performed": False})
         return 0
-    if args.command == "history":
-        _emit([item.model_dump(mode="json") for item in store.list(kind=args.kind, limit=args.limit)])
-        return 0
     try:
+        if args.command == "history":
+            _emit(store.load(args.task).model_dump(mode="json") if args.task else [item.model_dump(mode="json") for item in store.list(kind=args.kind, limit=args.limit)])
+            return 0
+        if args.command == "export":
+            from .exports import export_task
+            _emit({"task_id": args.task, "archive": str(export_task(store, args.task, args.asset)), "live_request_performed": False})
+            return 0
         payload = _read_task(args.task_file) if getattr(args, "task_file", None) else None
         if args.command == "estimate":
             _emit(estimate_task(payload or {}, store))

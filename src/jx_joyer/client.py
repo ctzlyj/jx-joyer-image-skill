@@ -2,12 +2,11 @@ from __future__ import annotations
 
 import base64
 from collections import deque
-import json
+import math
 import mimetypes
 import os
 from pathlib import Path
 import random
-import re
 import threading
 import time
 from typing import Any, Callable
@@ -41,18 +40,8 @@ class SlidingWindowRateLimiter:
             self.sleep(delay)
 
 
-def _error_detail(response: httpx.Response) -> str:
-    try:
-        payload = response.json()
-    except ValueError:
-        return (response.text or response.reason_phrase)[:500]
-    if isinstance(payload, dict):
-        error = payload.get("error")
-        if isinstance(error, dict) and error.get("message"):
-            return str(error["message"])[:500]
-        if payload.get("message"):
-            return str(payload["message"])[:500]
-    return (response.text or response.reason_phrase)[:500]
+def _error_category(status: int) -> str:
+    return {400: "invalid_request", 401: "authentication", 402: "quota", 403: "permission", 404: "model_unavailable", 408: "timeout", 413: "invalid_request", 422: "invalid_request", 429: "rate_limited", 504: "timeout"}.get(status, "upstream")
 
 
 def _mime_type(path: Path) -> str:
@@ -83,6 +72,8 @@ class OxygenClient:
         self._api_key = api_key.strip()
         self._sleep = sleep
         self._random = random_value
+        if not 1 <= max_attempts <= MAX_ATTEMPTS:
+            raise ValueError(f"max_attempts must be between 1 and {MAX_ATTEMPTS}")
         self._max_attempts = max_attempts
         self._http = httpx.Client(
             base_url=BASE_URL.rstrip("/") + "/",
@@ -118,38 +109,39 @@ class OxygenClient:
         last_error: OxygenApiError | None = None
         with semaphore:
             for attempt in range(1, self._max_attempts + 1):
+                retry_after = 0.0
                 if limiter is not None:
                     limiter.acquire()
                 try:
                     response = self._http.post(endpoint.lstrip("/"), json=payload)
                 except httpx.TransportError as exc:
-                    last_error = OxygenApiError(status_code=None, category="network", detail=str(exc), retryable=True)
+                    category = "timeout" if isinstance(exc, httpx.TimeoutException) else "network"
+                    last_error = OxygenApiError(status_code=None, category=category, detail="Transport failed; outcome may be unknown. Inspect the saved task before retrying.", retryable=True, attempt_count=attempt)
                 else:
                     retryable = response.status_code in retryable_statuses or response.status_code >= 500
                     if response.status_code < 400:
                         try:
                             parsed = response.json()
-                        except ValueError as exc:
-                            raise OxygenApiError(status_code=response.status_code, category="invalid_response", detail="response was not valid JSON", retryable=False) from exc
+                        except ValueError:
+                            raise OxygenApiError(status_code=response.status_code, category="invalid_response", detail="response was not valid JSON", retryable=False, attempt_count=attempt) from None
                         if not isinstance(parsed, dict):
-                            raise OxygenApiError(status_code=response.status_code, category="invalid_response", detail="response JSON must be an object", retryable=False)
+                            raise OxygenApiError(status_code=response.status_code, category="invalid_response", detail="response JSON must be an object", retryable=False, attempt_count=attempt)
                         return parsed
-                    category = "rate_limited" if response.status_code == 429 else "authentication" if response.status_code in {401, 403} else "upstream"
-                    detail = _error_detail(response).replace(self._api_key, "[REDACTED]")
-                    detail = re.sub(r"data:image/[^;]+;base64,[A-Za-z0-9+/=]+", "[REDACTED_DATA_URL]", detail)
-                    error = OxygenApiError(status_code=response.status_code, category=category, detail=detail, retryable=retryable)
+                    category = _error_category(response.status_code)
+                    error = OxygenApiError(status_code=response.status_code, category=category, detail="Upstream request failed; response content omitted for privacy.", retryable=retryable, attempt_count=attempt)
                     if not retryable:
                         raise error
                     last_error = error
-                    retry_after = 0.0
                     if response.status_code == 429:
                         try:
                             retry_after = float(response.headers.get("Retry-After", "60"))
+                            if not math.isfinite(retry_after) or retry_after < 0:
+                                retry_after = 60.0
                         except ValueError:
                             retry_after = 60.0
                 if attempt < self._max_attempts:
                     backoff = min(2 ** (attempt - 1) + self._random(), 10.0)
-                    self._sleep(max(backoff, locals().get("retry_after", 0.0)))
+                    self._sleep(max(backoff, retry_after))
             assert last_error is not None
             raise last_error
 

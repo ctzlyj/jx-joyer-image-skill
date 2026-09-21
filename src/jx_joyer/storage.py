@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+from contextlib import contextmanager
+import os
 from pathlib import Path
 import re
 import shutil
@@ -74,3 +76,38 @@ class TaskStore:
         if not path.is_dir():
             raise FileNotFoundError(f"task not found: {task_id}")
         return path
+
+    def file_path(self, task_id: str, relative: str) -> Path:
+        directory = self.directory(task_id)
+        if not relative or Path(relative).is_absolute():
+            raise ValueError("task file must use a relative path")
+        path = (directory / relative).resolve()
+        if not path.is_relative_to(directory):
+            raise ValueError("task file escapes its directory")
+        return path
+
+    @contextmanager
+    def execution_lock(self, task_id: str):
+        lock_path = self.file_path(task_id, ".execution.lock")
+        with lock_path.open("a+b") as handle:
+            if handle.tell() == 0:
+                handle.write(b"0")
+                handle.flush()
+            handle.seek(0)
+            try:
+                if os.name == "nt":
+                    import msvcrt
+                    msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+                else:
+                    import fcntl
+                    fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except OSError:
+                raise RuntimeError("task is already executing; inspect its progress before retrying") from None
+            try:
+                yield
+            finally:
+                handle.seek(0)
+                if os.name == "nt":
+                    msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+                else:
+                    fcntl.flock(handle.fileno(), fcntl.LOCK_UN)

@@ -31,6 +31,18 @@ Treat the user's natural-language request and supplied images as the interface. 
 
 Read `references/capabilities.md` only when routing is unclear, `references/task-schema.md` when constructing a task file, and `references/commands.md` for exact arguments.
 
+## Task recovery and downloads
+
+Use `references/recovery.md` for progress readback, failed-image retry, original reference snapshots and local ZIP export. These are local CLI workflows, not the website's browser drafts or asynchronous HTTP protocol.
+
+## Reference-edit integrity
+
+- Treat a successful model image as the complete output unless the user explicitly requests deterministic local overlays such as an exact supplied logo.
+- Do not paste a coarse rectangular crop from the source over a generated scene to preserve product details. Such crops can silently reintroduce source backgrounds, measurement guides, captions, watermarks, or hard seams. If exact source pixels must be retained, use a verified foreground mask that excludes all surrounding pixels, or stop and report that reliable preservation is unavailable.
+- When one real style has multiple size SKUs with the same artwork, edit one representative image for that style and copy the accepted result to its size variants. Do not make independent model calls for identical style artwork.
+- Keep local overlays small, preserve their original pixels, and place them in an uncluttered area without covering the product or generated copy. For batches, inspect a style contact sheet rather than relying only on dimensions and file counts.
+- After any local post-processing, run `scripts/verify_output_integrity.py` with every allowed overlay rectangle. The check must pass before delivery; any material difference outside those rectangles means the model result was altered and must be rebuilt.
+
 ## Fixed service configuration
 
 - Gateway: `http://llm-gw.jd.local/v1`

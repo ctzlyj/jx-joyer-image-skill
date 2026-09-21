@@ -83,6 +83,18 @@ def test_ecommerce_retry_only_failed_asset(tmp_path: Path) -> None:
     assert all(asset.status == "succeeded" for asset in retried.assets)
 
 
+def test_manual_copy_without_auto_copy_survives_retry(tmp_path: Path) -> None:
+    client = FakeClient(fail_first_image=True)
+    context = WorkflowContext(client=client, store=TaskStore(tmp_path))
+    copy = {"selling_points": ["手填卖点", "", ""], "long_title": "手填长标题", "short_title": "手填短标题"}
+    manifest = run_ecommerce({"product_name": "商品", "image_types": ["main"], "copy_fields": [], "product_copy": copy}, context)
+    retried = retry_ecommerce(manifest.id, [], context)
+    assert retried.request["product_copy"] == copy
+    assert all(call[0] != "text" for call in client.calls)
+    assert "手填卖点" in retried.assets[0].prompt
+    assert "手填长标题" in retried.assets[0].prompt
+
+
 def test_ecommerce_derivative_inherits_ratio(tmp_path: Path) -> None:
     client = FakeClient()
     context = WorkflowContext(client=client, store=TaskStore(tmp_path))

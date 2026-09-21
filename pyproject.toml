@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "jx-joyer-image-skill"
-version = "0.1.1"
+version = "0.2.0"
 description = "Codex skill and Python CLI for JD Oxygen ecommerce image workflows"
 readme = "README.md"
 requires-python = ">=3.11"

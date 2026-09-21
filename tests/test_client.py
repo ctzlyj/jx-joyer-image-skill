@@ -123,4 +123,4 @@ def test_error_redacts_runtime_key_and_data_url() -> None:
     message = str(caught.value)
     assert secret not in message
     assert "base64," not in message
-    assert "[REDACTED]" in message
+    assert "response content omitted" in message
