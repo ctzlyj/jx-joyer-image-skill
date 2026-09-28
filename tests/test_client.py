@@ -124,3 +124,94 @@ def test_error_redacts_runtime_key_and_data_url() -> None:
     assert secret not in message
     assert "base64," not in message
     assert "response content omitted" in message
+
+
+def test_generate_image_falls_back_to_oxygen_on_quota_and_downloads_url(monkeypatch) -> None:
+    requests = []
+    expected = b"cdn-image-bytes"
+    generated_url = "https://img20.360buyimg.com/imgzone/test.png"
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        payload = json.loads(request.content)
+        requests.append(payload)
+        if payload["model"] == "GPT-image-2-joybuilder":
+            return httpx.Response(403, request=request, json={"error": {"message": "个人本月预算总额已用尽"}})
+        return httpx.Response(200, request=request, json={"data": [{"url": generated_url}]})
+
+    downloads = []
+    def fake_get(url, **kwargs):
+        downloads.append((url, kwargs))
+        return httpx.Response(200, content=expected)
+
+    monkeypatch.setattr("jx_joyer.client.httpx.get", fake_get)
+    client = make_client(handler)
+    try:
+        assert client.generate_image(prompt="商品主图", size="2880x2880") == expected
+        assert client.last_image_model == "Oxygen-Product-Pro"
+    finally:
+        client.close()
+    assert [p["model"] for p in requests] == ["GPT-image-2-joybuilder", "Oxygen-Product-Pro"]
+    # 4K 尺寸就近映射到 Oxygen 实测可用尺寸
+    assert requests[1]["size"] == "1024x1024"
+    assert downloads[0][0] == generated_url
+    # 下载 CDN 图片时不能携带网关 Authorization 头
+    assert "Authorization" not in downloads[0][1].get("headers", {})
+
+
+def test_generate_image_falls_back_through_both_oxygen_models() -> None:
+    models = []
+    expected = b"imagen-bytes"
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        payload = json.loads(request.content)
+        models.append(payload["model"])
+        if payload["model"] == "Oxygen-Imagen":
+            return httpx.Response(200, request=request, json={"data": [{"b64_json": base64.b64encode(expected).decode()}]})
+        return httpx.Response(429, request=request, headers={"Retry-After": "0"}, json={"error": "rate limited"})
+
+    client = make_client(handler)
+    try:
+        assert client.generate_image(prompt="场景图", size="1024x1024") == expected
+        assert client.last_image_model == "Oxygen-Imagen"
+    finally:
+        client.close()
+    assert "GPT-image-2-joybuilder" in models
+    assert "Oxygen-Product-Pro" in models
+    assert models[-1] == "Oxygen-Imagen"
+
+
+def test_generate_image_invalid_request_does_not_fallback() -> None:
+    calls = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls.append(json.loads(request.content)["model"])
+        return httpx.Response(400, request=request, json={"error": "bad request"})
+
+    client = make_client(handler)
+    try:
+        with pytest.raises(OxygenApiError):
+            client.generate_image(prompt="x", size="1024x1024")
+    finally:
+        client.close()
+    assert calls == ["GPT-image-2-joybuilder"]
+
+
+def test_edit_image_falls_back_to_product_pro(tmp_path: Path) -> None:
+    source = tmp_path / "ref.png"
+    source.write_bytes(b"ref")
+    models = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        payload = json.loads(request.content)
+        models.append(payload["model"])
+        if payload["model"] == "GPT-image-2-joybuilder":
+            return httpx.Response(402, request=request, json={"error": "quota"})
+        return httpx.Response(200, request=request, json={"data": [{"b64_json": base64.b64encode(b"edited").decode()}]})
+
+    client = make_client(handler)
+    try:
+        assert client.edit_image(prompt="编辑", images=[source], size="1024x1024") == b"edited"
+        assert client.last_image_model == "Oxygen-Product-Pro"
+    finally:
+        client.close()
+    assert models == ["GPT-image-2-joybuilder", "Oxygen-Product-Pro"]

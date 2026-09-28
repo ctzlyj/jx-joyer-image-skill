@@ -1,6 +1,14 @@
 BASE_URL = "http://llm-gw.jd.local/v1"
 TEXT_MODEL = "GPT-5.6-Sol-joybuilder"
 IMAGE_MODEL = "GPT-image-2-joybuilder"
+# 付费模型额度经常被砍/耗尽：GPT-image-2 报额度/限流/权限类错误时，
+# 按此顺位自动降级。同一把网关 Key 对三个模型通用（2026-09-28 实测）。
+# 注意：Oxygen 两个模型返回的是图片 URL（data[0].url，京东 CDN），不是 b64_json。
+IMAGE_FALLBACK_MODELS = ("Oxygen-Product-Pro", "Oxygen-Imagen")
+# /images/edits 图生图编辑只确认 Oxygen-Product-Pro 支持
+IMAGE_EDIT_FALLBACK_MODELS = ("Oxygen-Product-Pro",)
+# Oxygen 系列实测可用的尺寸；请求其它尺寸时按宽高比就近映射
+OXYGEN_FALLBACK_SIZES = ("1024x1024", "1024x1536", "1536x1024")
 TEXT_CONCURRENCY = 20
 IMAGE_CONCURRENCY = 4
 IMAGE_STARTS_PER_SECOND = 1

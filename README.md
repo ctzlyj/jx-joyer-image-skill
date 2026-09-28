@@ -88,7 +88,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\run.ps1 -- doctor
 
 - 固定网关：`http://llm-gw.jd.local/v1`。
 - 固定文案模型：`GPT-5.6-Sol-joybuilder`。
-- 固定生图模型：`GPT-image-2-joybuilder`。
+- 生图模型兜底链：首选 `GPT-image-2-joybuilder`；付费额度耗尽/限流/权限类失败时自动降级 `Oxygen-Product-Pro`，再降级 `Oxygen-Imagen`（同一把网关 Key 通用；Oxygen 系列返回图片 URL，由客户端自动二次下载且不回传网关凭证）。图生图编辑仅降级到 `Oxygen-Product-Pro`。
 - 无参考图调用 `/images/generations`；有参考图调用 `/images/edits`。
 - 不依赖 Space 网站、ERP、浏览器存储、外部站数据、COS/CDN 或 Windows 客户端。
 - 不保存真实 Key、Cookie 或生产响应。
