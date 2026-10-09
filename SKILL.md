@@ -47,7 +47,7 @@ Use `references/recovery.md` for progress readback, failed-image retry, original
 
 - Gateway: `http://llm-gw.jd.local/v1`
 - Text model: `GPT-5.6-Sol-joybuilder`
-- Image model fallback chain: `GPT-image-2-joybuilder` first; on quota/rate-limit/permission failures (paid quota runs out fast), fall back to `Oxygen-Product-Pro`, then `Oxygen-Imagen`. The same gateway key works for all three. Oxygen models return an image URL instead of base64; the client downloads it without forwarding the gateway credential. For `/images/edits` only fall back to `Oxygen-Product-Pro`.
+- Image models (all three verified live on 2026-10-09): primary `Oxygen-Product-Pro` (ecommerce-optimized, free and fast, stable 2K); on quota/rate-limit/permission/model-unavailable failures fall back to `GPT-Image-2.5-Flare-joybuilder` (fast general, up to 4K*), then `GPT-Image-2.5-Sunburst-joybuilder` (professional fine detail, up to 4K*). `/images/edits` uses the same three-model chain. The same gateway key works for all three. `Oxygen-Product-Pro` returns an image URL instead of base64; the client downloads it without forwarding the gateway credential. `Oxygen-Product-Pro` only supports 1024x1024, 1024x1536 and 1536x1024; other requested sizes are mapped to the nearest supported size by aspect ratio, while the GPT-Image-2.5 models receive the requested size unchanged. The full comparison table for user-facing explanations is in `README.md`.
 - No reference image: `/images/generations`
 - One or more reference images: `/images/edits`
 

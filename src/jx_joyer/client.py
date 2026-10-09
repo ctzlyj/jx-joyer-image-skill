@@ -13,7 +13,7 @@ from typing import Any, Callable
 
 import httpx
 
-from .constants import BASE_URL, IMAGE_CONCURRENCY, IMAGE_EDIT_FALLBACK_MODELS, IMAGE_FALLBACK_MODELS, IMAGE_MODEL, IMAGE_STARTS_PER_SECOND, MAX_ATTEMPTS, OXYGEN_FALLBACK_SIZES, TEXT_CONCURRENCY, TEXT_MODEL, TIMEOUT_SECONDS
+from .constants import BASE_URL, IMAGE_CONCURRENCY, IMAGE_EDIT_FALLBACK_MODELS, IMAGE_FALLBACK_MODELS, IMAGE_MODEL, IMAGE_STARTS_PER_SECOND, MAX_ATTEMPTS, MODEL_SIZE_CONSTRAINTS, TEXT_CONCURRENCY, TEXT_MODEL, TIMEOUT_SECONDS
 from .errors import OxygenApiError
 
 
@@ -47,20 +47,20 @@ def _error_category(status: int) -> str:
 _IMAGE_FALLBACK_CATEGORIES = frozenset({"quota", "permission", "rate_limited", "model_unavailable"})
 
 
-def _fallback_size(size: str) -> str:
-    """把任意尺寸映射到 Oxygen 兜底模型实测可用的尺寸（按宽高比就近）。"""
-    if size in OXYGEN_FALLBACK_SIZES:
+def _size_ratio(size: str) -> float:
+    width_s, _, height_s = size.lower().partition("x")
+    return int(width_s) / int(height_s)
+
+
+def _nearest_supported_size(size: str, supported: tuple[str, ...]) -> str:
+    """把请求尺寸按宽高比就近映射到该模型实测可用的尺寸。"""
+    if size in supported:
         return size
     try:
-        width_s, height_s = size.lower().split("x", 1)
-        width, height = int(width_s), int(height_s)
-    except (ValueError, AttributeError):
-        return "1024x1024"
-    if height > width:
-        return "1024x1536"
-    if width > height:
-        return "1536x1024"
-    return "1024x1024"
+        ratio = _size_ratio(size)
+    except (ValueError, ZeroDivisionError, AttributeError):
+        return supported[0]
+    return min(supported, key=lambda item: abs(_size_ratio(item) - ratio))
 
 
 def _mime_type(path: Path) -> str:
@@ -183,7 +183,7 @@ class OxygenClient:
         return result
 
     def generate_image(self, *, prompt: str, size: str) -> bytes:
-        # 付费额度耗尽等场景按 IMAGE_FALLBACK_MODELS 顺位自动降级
+        # 主模型不可用时按 IMAGE_FALLBACK_MODELS 顺位自动降级
         payload = self._image_request_with_fallback(
             "images/generations",
             {"prompt": prompt, "size": size},
@@ -211,13 +211,16 @@ class OxygenClient:
 
         额度/限流/权限/模型不存在类错误是当前模型不可用的信号，直接切下一个模型，
         不在原模型上空重试；网络/超时类错误与模型无关，直接抛出。
+        每个模型按自身的实测尺寸约束映射请求尺寸：Oxygen-Product-Pro 就近映射，
+        GPT-Image-2.5 系列按请求尺寸透传。
         """
         last_error: OxygenApiError | None = None
-        for index, model in enumerate(chain):
+        for model in chain:
             payload = dict(base_payload)
             payload["model"] = model
-            if index > 0:
-                payload["size"] = _fallback_size(str(payload.get("size", "")))
+            supported = MODEL_SIZE_CONSTRAINTS.get(model)
+            if supported is not None:
+                payload["size"] = _nearest_supported_size(str(payload.get("size", "")), supported)
             try:
                 result = self._request(endpoint, payload, image=True)
             except OxygenApiError as exc:
@@ -241,7 +244,7 @@ class OxygenClient:
                 return base64.b64decode(encoded, validate=True)
             except ValueError as exc:
                 raise OxygenApiError(status_code=200, category="invalid_response", detail="image response base64 was invalid", retryable=False) from exc
-        # Oxygen 兜底模型返回图片 URL（京东 CDN），需要二次下载
+        # Oxygen-Product-Pro 返回图片 URL（京东 CDN），需要二次下载
         url = item.get("url")
         if isinstance(url, str) and url.startswith("http"):
             return self._download_image(url)

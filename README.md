@@ -49,7 +49,7 @@ Codex 会自动分析需求、选择能力、补齐任务参数。只有确实�
 - 爆款复刻：模板分析、切片、文案、分片生成和取消。
 - 本地历史：任务清单、输出文件、可选请求量查询和错误脱敏；成功图片可全量或选中导出 ZIP，不调用模型。
 
-当前版本 `0.2.0`。本次同步范围及验证见 `docs/2026-09-21-sync.md`；任务恢复和旧版兼容见 `references/recovery.md`。
+当前版本 `0.4.0`。本次生图模型更新范围及验证见 `docs/2026-10-09-image-models.md`；任务恢复和旧版兼容见 `references/recovery.md`。
 
 ## 输出位置
 
@@ -84,11 +84,35 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\run.ps1 -- doctor
 
 复杂任务的命令见 `references/commands.md`，格式见 `references/task-schema.md`，能力映射见 `references/capabilities.md`。
 
+## 生图模型
+
+三款模型都走公司网关 `http://llm-gw.jd.local/v1`，同一把网关 Key 通用，`2026-10-09` 已全部线上实测（文生图与参考图编辑均可用）。默认首选 `Oxygen-Product-Pro`；额度耗尽、限流、权限或模型不可用类失败时，自动降级 `GPT-Image-2.5-Flare-joybuilder`，再降级 `GPT-Image-2.5-Sunburst-joybuilder`。`Oxygen-Product-Pro` 实测支持 1024x1024、1024x1536、1536x1024，其它请求尺寸会按宽高比就近映射；GPT-Image-2.5 系列按请求尺寸透传（最高 4K*）。
+
+| 对比维度 | Oxygen-Product-Pro | GPT-Image-2.5-Flare | GPT-Image-2.5-Sunburst |
+| --- | --- | --- | --- |
+| 模型定位 | 电商专项生成 | 快速通用生成 | 高质量精细生成 |
+| 模型架构 | 27B 多模态统一模型 | GPT Image 2.5 小模型 | GPT Image 2.5 基础模型 |
+| 核心优势 | 商品保持、文字渲染 | 快速、通用性强 | 复杂生成、精细编辑 |
+| 商品主体保持 | 专项训练优化 | 支持参考图保持 | 支持高精度参考图编辑 |
+| 中文文字渲染 | 专项优化 | 支持 | 支持 |
+| 图像生成 | 支持 | 支持 | 支持 |
+| 参考图编辑 | 支持（线上已实测） | 支持 | 支持 |
+| 高清分辨率 | 稳定 2K | 最高支持 4K* | 最高支持 4K* |
+| 透明背景 | 不支持 | 支持 | 支持 |
+| 生成速度 | 免费快速 | 快速优先 | 质量优先 |
+| 电商主图 | 核心目标场景 | 适用 | 适用 |
+| 电商场景图 | 核心目标场景 | 适用 | 适用 |
+| 人像写真 | 非专项定位 | 适合 | 适合精细创作 |
+| 创意海报 | 可用于商品营销 | 适合快速创作 | 适合复杂设计 |
+| 适合用户 | 电商商家、运营人员 | 普通用户、内容创作者 | 专业创作者、设计师 |
+
+\* 4K、透明背景等高级能力以网关实际返回为准；降级只影响当次请求，成功结果不受影响。
+
 ## 安全边界
 
 - 固定网关：`http://llm-gw.jd.local/v1`。
 - 固定文案模型：`GPT-5.6-Sol-joybuilder`。
-- 生图模型兜底链：首选 `GPT-image-2-joybuilder`；付费额度耗尽/限流/权限类失败时自动降级 `Oxygen-Product-Pro`，再降级 `Oxygen-Imagen`（同一把网关 Key 通用；Oxygen 系列返回图片 URL，由客户端自动二次下载且不回传网关凭证）。图生图编辑仅降级到 `Oxygen-Product-Pro`。
+- 生图模型兜底链：首选 `Oxygen-Product-Pro`；额度耗尽/限流/权限/模型不可用类失败时自动降级 `GPT-Image-2.5-Flare-joybuilder`，再降级 `GPT-Image-2.5-Sunburst-joybuilder`（同一把网关 Key 通用；`Oxygen-Product-Pro` 返回图片 URL，由客户端自动二次下载且不回传网关凭证）。文生图与参考图编辑使用同一降级链，完整对比见上文《生图模型》。
 - 无参考图调用 `/images/generations`；有参考图调用 `/images/edits`。
 - 不依赖 Space 网站、ERP、浏览器存储、外部站数据、COS/CDN 或 Windows 客户端。
 - 不保存真实 Key、Cookie 或生产响应。
